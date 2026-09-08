@@ -1,0 +1,13 @@
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.env
+backend/.mypy_cache/
+backend/.pytest_cache/
+backend/**/.pytest_cache/
+backend/app/eval/results*.json
+backend/app/finetune/data/
+backend/app/finetune/output/
+data/
+*.pyc
+.DS_Store

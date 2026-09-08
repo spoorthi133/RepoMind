@@ -1,0 +1,152 @@
+[
+  {
+    "question": "How does Flask register a URL rule that maps a path to a view function?",
+    "file_path": "src/flask/sansio/app.py",
+    "target_line": 605,
+    "symbol": "App.add_url_rule"
+  },
+  {
+    "question": "Where is the route() decorator implemented that lets you write @app.route(...)?",
+    "file_path": "src/flask/sansio/scaffold.py",
+    "target_line": 344,
+    "symbol": "Scaffold.route"
+  },
+  {
+    "question": "How does Flask dispatch an incoming request to the matched view function?",
+    "file_path": "src/flask/app.py",
+    "target_line": 969,
+    "symbol": "Flask.dispatch_request"
+  },
+  {
+    "question": "What method wraps dispatch_request and runs after-request functions to build the final response?",
+    "file_path": "src/flask/app.py",
+    "target_line": 995,
+    "symbol": "Flask.full_dispatch_request"
+  },
+  {
+    "question": "Where is the main WSGI callable of the Flask application object defined?",
+    "file_path": "src/flask/app.py",
+    "target_line": 1569,
+    "symbol": "Flask.wsgi_app"
+  },
+  {
+    "question": "How can I register a function to run before every request in Flask?",
+    "file_path": "src/flask/sansio/scaffold.py",
+    "target_line": 468,
+    "symbol": "Scaffold.before_request"
+  },
+  {
+    "question": "How can I register a function to run after every request in Flask?",
+    "file_path": "src/flask/sansio/scaffold.py",
+    "target_line": 495,
+    "symbol": "Scaffold.after_request"
+  },
+  {
+    "question": "How do I register a teardown function that runs when the application context is popped?",
+    "file_path": "src/flask/sansio/app.py",
+    "target_line": 827,
+    "symbol": "App.teardown_appcontext"
+  },
+  {
+    "question": "Where is the errorhandler decorator implemented for registering custom error pages?",
+    "file_path": "src/flask/sansio/scaffold.py",
+    "target_line": 606,
+    "symbol": "Scaffold.errorhandler"
+  },
+  {
+    "question": "How does Flask's url_for function build a URL for a given endpoint name?",
+    "file_path": "src/flask/helpers.py",
+    "target_line": 200,
+    "symbol": "url_for"
+  },
+  {
+    "question": "How does Flask implement an HTTP redirect response?",
+    "file_path": "src/flask/helpers.py",
+    "target_line": 254,
+    "symbol": "redirect"
+  },
+  {
+    "question": "How do I abort the current request with an HTTP error status code in Flask?",
+    "file_path": "src/flask/helpers.py",
+    "target_line": 281,
+    "symbol": "abort"
+  },
+  {
+    "question": "How does flash() store a message to be displayed on the next request?",
+    "file_path": "src/flask/helpers.py",
+    "target_line": 326,
+    "symbol": "flash"
+  },
+  {
+    "question": "How are flashed messages retrieved so a template can display them?",
+    "file_path": "src/flask/helpers.py",
+    "target_line": 360,
+    "symbol": "get_flashed_messages"
+  },
+  {
+    "question": "How does Flask serve a file as an HTTP response with send_file?",
+    "file_path": "src/flask/helpers.py",
+    "target_line": 417,
+    "symbol": "send_file"
+  },
+  {
+    "question": "How does send_from_directory safely serve a file from within a given directory?",
+    "file_path": "src/flask/helpers.py",
+    "target_line": 543,
+    "symbol": "send_from_directory"
+  },
+  {
+    "question": "How is the jsonify() function implemented to build a JSON response?",
+    "file_path": "src/flask/json/__init__.py",
+    "target_line": 138,
+    "symbol": "jsonify"
+  },
+  {
+    "question": "How does Flask render a Jinja2 template file into a string?",
+    "file_path": "src/flask/templating.py",
+    "target_line": 136,
+    "symbol": "render_template"
+  },
+  {
+    "question": "Where is the Config class that stores Flask application configuration defined?",
+    "file_path": "src/flask/config.py",
+    "target_line": 50,
+    "symbol": "Config"
+  },
+  {
+    "question": "How does Flask load configuration values from a Python object with from_object?",
+    "file_path": "src/flask/config.py",
+    "target_line": 218,
+    "symbol": "Config.from_object"
+  },
+  {
+    "question": "How does Flask load configuration values from a .py file with from_pyfile?",
+    "file_path": "src/flask/config.py",
+    "target_line": 187,
+    "symbol": "Config.from_pyfile"
+  },
+  {
+    "question": "Where is the AppContext class that manages the application context stack defined?",
+    "file_path": "src/flask/ctx.py",
+    "target_line": 260,
+    "symbol": "AppContext"
+  },
+  {
+    "question": "Where is the public Blueprint class used for organizing routes into reusable components defined?",
+    "file_path": "src/flask/blueprints.py",
+    "target_line": 18,
+    "symbol": "Blueprint"
+  },
+  {
+    "question": "Where is the FlaskClient class used by test_client() for making test requests defined?",
+    "file_path": "src/flask/testing.py",
+    "target_line": 109,
+    "symbol": "FlaskClient"
+  },
+  {
+    "question": "How does Flask.run() start the local development server?",
+    "file_path": "src/flask/app.py",
+    "target_line": 633,
+    "symbol": "Flask.run"
+  }
+]

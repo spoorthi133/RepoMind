@@ -1,0 +1,16 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+asyncpg==0.30.0
+pgvector==0.3.6
+sentence-transformers==3.3.1
+tree-sitter==0.21.3
+tree-sitter-languages==1.10.2
+google-generativeai==0.8.3
+python-dotenv==1.0.1
+pylint==3.3.3
+bandit==1.8.0
+mypy==1.14.1
+datasets>=2.0
+accelerate>=0.26.0
