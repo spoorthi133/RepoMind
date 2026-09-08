@@ -7,7 +7,7 @@ pgvector==0.3.6
 sentence-transformers==3.3.1
 tree-sitter==0.21.3
 tree-sitter-languages==1.10.2
-google-generativeai==0.8.3
+groq==1.7.0
 python-dotenv==1.0.1
 pylint==3.3.3
 bandit==1.8.0

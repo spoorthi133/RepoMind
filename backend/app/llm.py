@@ -1,7 +1,8 @@
 import logging
 from collections.abc import AsyncIterator
+from functools import lru_cache
 
-import google.generativeai as genai
+from groq import AsyncGroq
 
 from app.config import settings
 
@@ -24,9 +25,9 @@ You are given: (1) code chunks retrieved because they are relevant to the error,
 - Be precise and concise."""
 
 
-def _configure() -> None:
-    if settings.gemini_api_key:
-        genai.configure(api_key=settings.gemini_api_key)
+@lru_cache(maxsize=1)
+def _client() -> AsyncGroq:
+    return AsyncGroq(api_key=settings.groq_api_key)
 
 
 def _format_context(chunks: list[dict]) -> str:
@@ -61,29 +62,33 @@ def build_diagnosis_prompt(error_text: str, chunks: list[dict], findings: list[d
 
 async def generate(prompt: str) -> str | None:
     """Non-streaming single-shot generation, used for pre-computed summaries."""
-    if not settings.gemini_api_key:
+    if not settings.groq_api_key:
         return None
-    _configure()
-    model = genai.GenerativeModel(settings.gemini_model)
     try:
-        response = await model.generate_content_async(prompt)
-        return response.text
+        response = await _client().chat.completions.create(
+            model=settings.groq_model,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content
     except Exception:
         logger.exception("LLM generate() call failed")
         return None
 
 
 async def _stream(prompt: str) -> AsyncIterator[str]:
-    if not settings.gemini_api_key:
-        yield "[LLM not configured: set GEMINI_API_KEY in backend/.env]"
+    if not settings.groq_api_key:
+        yield "[LLM not configured: set GROQ_API_KEY in backend/.env]"
         return
 
-    _configure()
-    model = genai.GenerativeModel(settings.gemini_model)
-    response = await model.generate_content_async(prompt, stream=True)
-    async for part in response:
-        if part.text:
-            yield part.text
+    stream = await _client().chat.completions.create(
+        model=settings.groq_model,
+        messages=[{"role": "user", "content": prompt}],
+        stream=True,
+    )
+    async for chunk in stream:
+        delta = chunk.choices[0].delta.content
+        if delta:
+            yield delta
 
 
 def stream_answer(question: str, chunks: list[dict]) -> AsyncIterator[str]:
