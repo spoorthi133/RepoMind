@@ -1,4 +1,5 @@
 import json
+import logging
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse
@@ -9,6 +10,7 @@ from app.ingest import ingest_repo
 from app.llm import stream_answer, stream_diagnosis
 from app.retrieval import hybrid_search
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -89,8 +91,13 @@ async def chat(repo_id: int, payload: ChatRequest):
         ]
         yield f"event: citations\ndata: {json.dumps(citations)}\n\n"
 
-        async for token in stream_answer(payload.question, chunks):
-            yield f"event: token\ndata: {json.dumps({'text': token})}\n\n"
+        try:
+            async for token in stream_answer(payload.question, chunks):
+                yield f"event: token\ndata: {json.dumps({'text': token})}\n\n"
+        except Exception as exc:
+            logger.exception("LLM streaming failed for chat")
+            yield f"event: error\ndata: {json.dumps({'message': str(exc)})}\n\n"
+            return
 
         yield "event: done\ndata: {}\n\n"
 
@@ -177,8 +184,13 @@ async def diagnose(repo_id: int, payload: DiagnoseRequest):
         yield f"event: citations\ndata: {json.dumps(citations)}\n\n"
         yield f"event: findings\ndata: {json.dumps(findings)}\n\n"
 
-        async for token in stream_diagnosis(payload.error_text, chunks, findings):
-            yield f"event: token\ndata: {json.dumps({'text': token})}\n\n"
+        try:
+            async for token in stream_diagnosis(payload.error_text, chunks, findings):
+                yield f"event: token\ndata: {json.dumps({'text': token})}\n\n"
+        except Exception as exc:
+            logger.exception("LLM streaming failed for diagnose")
+            yield f"event: error\ndata: {json.dumps({'message': str(exc)})}\n\n"
+            return
 
         yield "event: done\ndata: {}\n\n"
 

@@ -45,6 +45,14 @@ export function ChatPanel({ repoId }: { repoId: number }) {
             next[assistantIndex] = { ...next[assistantIndex], text: next[assistantIndex].text + text };
             return next;
           });
+        } else if (evt.event === "error") {
+          const { message } = JSON.parse(evt.data) as { message: string };
+          setMessages((prev) => {
+            const next = [...prev];
+            next[assistantIndex] = { ...next[assistantIndex], text: next[assistantIndex].text + `\n\nError: ${message}` };
+            return next;
+          });
+          break;
         } else if (evt.event === "done") {
           break;
         }

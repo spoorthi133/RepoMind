@@ -51,6 +51,14 @@ export function DiagnosePanel({ repoId }: { repoId: number }) {
             next[index] = { ...next[index], answer: next[index].answer + token };
             return next;
           });
+        } else if (evt.event === "error") {
+          const { message } = JSON.parse(evt.data) as { message: string };
+          setResults((prev) => {
+            const next = [...prev];
+            next[index] = { ...next[index], answer: next[index].answer + `\n\nError: ${message}` };
+            return next;
+          });
+          break;
         } else if (evt.event === "done") {
           break;
         }
