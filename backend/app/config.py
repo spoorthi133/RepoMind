@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     database_url: str = "postgresql://repomind:repomind@localhost:5432/repomind"
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-1.5-flash"
+    gemini_model: str = "gemini-flash-latest"
     embedding_model_name: str = "all-MiniLM-L6-v2"
     embedding_dim: int = 384
     repo_storage_dir: str = "../data/repos"
