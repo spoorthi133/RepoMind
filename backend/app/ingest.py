@@ -145,20 +145,24 @@ async def ingest_local_repo(
 
         await pool.execute("DELETE FROM chunks WHERE file_id=$1", file_id)
 
-        texts = [f"{c.docstring or ''}\n{c.code}".strip() for c in chunks]
+        # Prepend the file path so a question that names a file directly
+        # (e.g. "what does backend/ml/anomaly_detector.py do?") is
+        # semantically close to that file's chunks, not just chunks whose
+        # code/docstring happen to be about the same topic.
+        texts = [f"{relative_path}\n{c.docstring or ''}\n{c.code}".strip() for c in chunks]
         # embed_texts is a synchronous CPU-bound call (sentence-transformers);
         # run it off the event loop so it doesn't stall the whole server.
         vectors = await asyncio.to_thread(embed_texts, texts)
 
         rows = [
-            (file_id, repo_id, c.symbol_name, c.symbol_type, c.start_line, c.end_line, c.code, c.docstring, vec)
+            (file_id, repo_id, relative_path, c.symbol_name, c.symbol_type, c.start_line, c.end_line, c.code, c.docstring, vec)
             for c, vec in zip(chunks, vectors)
         ]
         await pool.executemany(
             """
             INSERT INTO chunks
-                (file_id, repo_id, symbol_name, symbol_type, start_line, end_line, code, docstring, embedding)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                (file_id, repo_id, path, symbol_name, symbol_type, start_line, end_line, code, docstring, embedding)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             """,
             rows,
         )

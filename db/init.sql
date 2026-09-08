@@ -28,6 +28,11 @@ CREATE TABLE chunks (
     id SERIAL PRIMARY KEY,
     file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
     repo_id INTEGER NOT NULL REFERENCES repos(id) ON DELETE CASCADE,
+    -- Denormalized copy of files.path: a generated column can only reference
+    -- columns on its own table, and we want the file path itself searchable
+    -- (both in full-text and in what gets embedded) so that a question which
+    -- names a file directly actually retrieves that file's chunks.
+    path TEXT NOT NULL DEFAULT '',
     symbol_name TEXT,
     symbol_type TEXT, -- function | class | method
     start_line INTEGER NOT NULL,
@@ -35,12 +40,13 @@ CREATE TABLE chunks (
     code TEXT NOT NULL,
     docstring TEXT,
     embedding vector(384),
+    -- Weighted so a literal filename/symbol match in the query ranks well
+    -- above a chunk that merely happens to share a word with the code body.
     content_tsv tsvector GENERATED ALWAYS AS (
-        to_tsvector('english',
-            coalesce(symbol_name, '') || ' ' ||
-            coalesce(docstring, '') || ' ' ||
-            coalesce(code, '')
-        )
+        setweight(to_tsvector('english', coalesce(path, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(symbol_name, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(docstring, '')), 'C') ||
+        setweight(to_tsvector('english', coalesce(code, '')), 'D')
     ) STORED,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

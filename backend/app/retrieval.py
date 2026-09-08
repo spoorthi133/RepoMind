@@ -1,6 +1,23 @@
+import re
+
 import asyncpg
 
 from app.embeddings import embed_text
+
+_WORD_RE = re.compile(r"[A-Za-z0-9_]+")
+
+
+def _or_tsquery(query: str) -> str:
+    """Turns free text into an OR-joined tsquery ('term1 | term2 | ...').
+
+    plainto_tsquery/websearch_to_tsquery both AND every word together, which
+    means a natural question like "what does X do?" needs every single word
+    (including "what", "does") to appear in a chunk to match at all -- in
+    practice that returns nothing for conversational queries. OR-ing lets
+    ts_rank prefer chunks matching more terms without requiring all of them.
+    """
+    return " | ".join(_WORD_RE.findall(query))
+
 
 _SELECT_FIELDS = """
     c.id, c.file_id, f.path AS file_path, c.symbol_name, c.symbol_type,
@@ -26,17 +43,21 @@ async def _vector_search(pool: asyncpg.Pool, repo_id: int, embedding: list[float
 
 
 async def _keyword_search(pool: asyncpg.Pool, repo_id: int, query: str, k: int) -> list[dict]:
+    tsquery_str = _or_tsquery(query)
+    if not tsquery_str:
+        return []
+
     rows = await pool.fetch(
         f"""
         SELECT {_SELECT_FIELDS}
         FROM chunks c
         JOIN files f ON f.id = c.file_id
-        WHERE c.repo_id = $1 AND c.content_tsv @@ plainto_tsquery('english', $2)
-        ORDER BY ts_rank(c.content_tsv, plainto_tsquery('english', $2)) DESC
+        WHERE c.repo_id = $1 AND c.content_tsv @@ to_tsquery('english', $2)
+        ORDER BY ts_rank(c.content_tsv, to_tsquery('english', $2)) DESC
         LIMIT $3
         """,
         repo_id,
-        query,
+        tsquery_str,
         k,
     )
     return [dict(r) for r in rows]
