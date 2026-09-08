@@ -6,6 +6,7 @@ DIAGNOSIS_SYSTEM_PROMPT for how these findings are used only to ground the
 LLM's explanation, never presented as an independent discovery.
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -218,4 +219,26 @@ def run_static_analysis(repo_root: Path, files_by_language: dict[str, list[Path]
     findings += run_bandit(repo_root, python_files)
     findings += run_mypy(repo_root, python_files)
     findings += run_eslint(repo_root, js_ts_files)
+    return findings
+
+
+async def run_static_analysis_async(repo_root: Path, files_by_language: dict[str, list[Path]]) -> list[dict]:
+    """Same findings as run_static_analysis, but runs the four tools concurrently
+    (each is an independent subprocess) and off the event loop, instead of blocking
+    the whole server one tool at a time for the duration of ingestion."""
+    python_files = files_by_language.get("python", [])
+    js_ts_files = [
+        *files_by_language.get("javascript", []),
+        *files_by_language.get("typescript", []),
+        *files_by_language.get("tsx", []),
+    ]
+    results = await asyncio.gather(
+        asyncio.to_thread(run_pylint, repo_root, python_files),
+        asyncio.to_thread(run_bandit, repo_root, python_files),
+        asyncio.to_thread(run_mypy, repo_root, python_files),
+        asyncio.to_thread(run_eslint, repo_root, js_ts_files),
+    )
+    findings: list[dict] = []
+    for r in results:
+        findings += r
     return findings

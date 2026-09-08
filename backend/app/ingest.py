@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import logging
 import os
@@ -12,12 +13,16 @@ from app.clone import clone_repo
 from app.config import settings
 from app.embeddings import embed_texts
 from app.ignore_list import detect_language, should_ignore_dir, should_ignore_file
-from app.static_analysis import run_static_analysis
+from app.static_analysis import run_static_analysis_async
 from app.summarize import find_readme, summarize_file, summarize_project
 
 logger = logging.getLogger(__name__)
 
 ChunkFn = Callable[[bytes, str], list[CodeChunk]]
+
+# Bounds how many summarize_file() calls run concurrently, so a large repo
+# doesn't fire off hundreds of simultaneous LLM requests at once.
+SUMMARY_CONCURRENCY = 6
 
 
 def _iter_source_files(root: Path):
@@ -60,6 +65,7 @@ async def ingest_local_repo(
     even when someone swaps in a fine-tuned embedding model (Phase 5).
     """
     kept_paths: list[str] = []
+    pending: list[dict] = []
 
     for file_path, language in _iter_source_files(cloned_path):
         relative_path = file_path.relative_to(cloned_path).as_posix()
@@ -85,12 +91,37 @@ async def ingest_local_repo(
                 await pool.execute("DELETE FROM files WHERE id=$1", existing["id"])
             continue
 
-        if generate_summaries:
-            summary = existing["summary"] if (content_unchanged and existing["summary"]) else await summarize_file(
-                relative_path, language, chunks
-            )
+        pending.append(
+            {
+                "relative_path": relative_path,
+                "language": language,
+                "chunks": chunks,
+                "content_hash": content_hash,
+                "existing": existing,
+                "content_unchanged": content_unchanged,
+                "needs_summary": generate_summaries and not (content_unchanged and existing and existing["summary"]),
+            }
+        )
+
+    # Summaries are independent LLM calls per file, so run them concurrently
+    # (bounded) instead of one sequential await per file in the loop below.
+    sem = asyncio.Semaphore(SUMMARY_CONCURRENCY)
+
+    async def _resolve_summary(item: dict) -> None:
+        if not generate_summaries:
+            item["summary"] = item["existing"]["summary"] if (item["existing"] is not None and item["content_unchanged"]) else None
+        elif not item["needs_summary"]:
+            item["summary"] = item["existing"]["summary"]
         else:
-            summary = existing["summary"] if (existing is not None and content_unchanged) else None
+            async with sem:
+                item["summary"] = await summarize_file(item["relative_path"], item["language"], item["chunks"])
+
+    await asyncio.gather(*(_resolve_summary(item) for item in pending))
+
+    for item in pending:
+        relative_path = item["relative_path"]
+        language = item["language"]
+        chunks = item["chunks"]
 
         file_id = await pool.fetchval(
             """
@@ -107,15 +138,17 @@ async def ingest_local_repo(
             repo_id,
             relative_path,
             language,
-            content_hash,
-            summary,
+            item["content_hash"],
+            item["summary"],
             settings.embedding_model_name,
         )
 
         await pool.execute("DELETE FROM chunks WHERE file_id=$1", file_id)
 
         texts = [f"{c.docstring or ''}\n{c.code}".strip() for c in chunks]
-        vectors = embed_texts(texts)
+        # embed_texts is a synchronous CPU-bound call (sentence-transformers);
+        # run it off the event loop so it doesn't stall the whole server.
+        vectors = await asyncio.to_thread(embed_texts, texts)
 
         rows = [
             (file_id, repo_id, c.symbol_name, c.symbol_type, c.start_line, c.end_line, c.code, c.docstring, vec)
@@ -168,18 +201,22 @@ async def ingest_repo(pool: asyncpg.Pool, repo_id: int, url: str) -> None:
         await _set_status(pool, repo_id, "ingesting")
 
         storage_dir = Path(settings.repo_storage_dir)
-        cloned_path = clone_repo(url, storage_dir)
+        # clone_repo shells out to git and blocks until it's done; run it off
+        # the event loop so it doesn't stall every other in-flight request.
+        cloned_path = await asyncio.to_thread(clone_repo, url, storage_dir)
         await pool.execute("UPDATE repos SET cloned_path=$2 WHERE id=$1", repo_id, str(cloned_path))
 
-        total_chunks = await ingest_local_repo(
-            pool, repo_id, cloned_path, chunk_fn=chunk_source, generate_summaries=True
-        )
-
-        # Feature E: static analysis, independent of the chunk/embedding cache above.
+        # Feature E's static analysis doesn't touch the DB or depend on the
+        # chunk/embedding cache above, so run it concurrently with ingestion
+        # instead of waiting for ingestion to finish first.
         files_by_language: dict[str, list[Path]] = defaultdict(list)
         for file_path, language in _iter_source_files(cloned_path):
             files_by_language[language].append(file_path)
-        findings = run_static_analysis(cloned_path, files_by_language)
+
+        total_chunks, findings = await asyncio.gather(
+            ingest_local_repo(pool, repo_id, cloned_path, chunk_fn=chunk_source, generate_summaries=True),
+            run_static_analysis_async(cloned_path, files_by_language),
+        )
         await _store_static_findings(pool, repo_id, findings)
 
         # Feature D: roll up a project-level summary from the README + entry points + file summaries.
