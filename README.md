@@ -8,6 +8,19 @@ It's built around one core bet: **retrieval quality determines answer quality**,
 
 Most "chat with your codebase" tools split files by character count and call it a day. RepoMind chunks code along its actual syntax tree (via tree-sitter), so a retrieved chunk is always a whole function, method, or class — never a fragment cut off mid-body. It then retrieves with a hybrid of vector similarity and full-text search (reciprocal rank fusion), so both semantic questions ("how does auth work here?") and literal ones ("what does `adapters.py` do?") resolve well. The LLM is only ever allowed to answer from what retrieval actually returned, and is instructed to say so explicitly when the context doesn't contain the answer.
 
+## Demo
+
+### 1. Repository Analysis
+![RepoMind Repository Analysis](./Screenshot%202026-10-02%20122433.png)
+
+### 2. AI Code Q&A
+![RepoMind AI Code Q&A](./Screenshot%202026-10-02%20123127.png)
+
+### 3. Repository Summary
+![RepoMind Repository Summary](./Screenshot%202026-10-02%20123155.png)
+
+### 4. Code & Citations
+![RepoMind Code and Citations](./Screenshot%202026-10-02%20123215.png)
 ## Features
 
 - **AST-aware chunking** — tree-sitter parses each file and chunks by function/class/method boundary, across Python, JS, TS, TSX, Go, Java, Ruby, Rust, C, and C++.
