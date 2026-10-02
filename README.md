@@ -14,10 +14,10 @@ Most "chat with your codebase" tools split files by character count and call it 
 ![RepoMind Repository Analysis](./Screenshot%202026-10-02%20122433.png)
 
 ### 2. AI Code Q&A
-![RepoMind Repository Summary](./Screenshot%202026-10-02%20123127.png)
+![RepoMind AI Code Q&A](./Screenshot%202026-10-02%20123127.png)
 
 ### 3. Repository Summary
-![RepoMind AI Code Q&A](./Screenshot%202026-10-02%20123155.png)
+![RepoMind Repository Summary](./Screenshot%202026-10-02%20123155.png)
 
 ### 4. Code & Citations
 ![RepoMind Code and Citations](./Screenshot%202026-10-02%20123215.png)
